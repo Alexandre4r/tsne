@@ -1,5 +1,6 @@
 import numpy as np
-from bh.node import Node
+from bhsne.node import Node
+
 
 class Tree:
     def __init__(self, b_array):
@@ -18,10 +19,11 @@ def find_root(b_array):
     L = max(xmax - xmin, ymax - ymin)
     return xmin, ymin, L
 
+
 def create_tree(b_array):
     t = Tree(b_array)
     t.node = Node(t.x, t.y, t.L)
-    for body in b_array:
-        t.node.insert(body)
+    for i in range(0, b_array.shape[0]):
+        t.node.insert(b_array[i])
     t.node.center_of_mass()
     return t
