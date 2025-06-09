@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 import utils
 
 # Génère un cercle en 3D (N points)
@@ -42,3 +43,5 @@ d = 2
     # Exécution du t-SNE de ton utils.py
 Y_final, Y_all = utils.tsne(X, sigma, max_iter, step, d)
 plot_2d(Y_final, "Projection t-SNE")
+
+
