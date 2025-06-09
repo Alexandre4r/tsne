@@ -123,3 +123,6 @@ def tsne(xdata, perplexity, max_iter, step, d):
     return Y[-1], Y
 
 
+
+
+
