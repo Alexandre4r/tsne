@@ -1,5 +1,6 @@
 import numpy as np
 import time
+from bhsne.barnes_hut import bh_gradient
 
 def grid_search(diff_i: np.ndarray, i: int, perplexity: int) -> float:
 
@@ -79,6 +80,30 @@ def q_prob(ydata):
 
     return qij
 
+def get_y_neighbors(pij, perplexity):
+    """
+    Pour chaque point, renvoie un tableau numpy (n_points, K) des indices des K plus grands p_ij (hors soi-même).
+    Args:
+        pij_app (np.ndarray): Matrice des probabilités p_ij (n_points x n_points)
+        perplexity (float): perplexité désirée
+    Returns:
+        y_neighbors (np.ndarray): Tableau (n_points, K) des indices voisins pour chaque i
+    """
+    n_points = pij.shape[0]
+    K = int(3 * perplexity)
+    pij = pij.copy()
+    np.fill_diagonal(pij, -np.inf)  # On ne veut pas prendre soi-même
+
+    # Argsort en ordre décroissant pour chaque ligne, on prend les K premiers
+    neighbors = np.argpartition(-pij, K, axis=1)[:, :K]
+    # Si tu veux que les voisins soient strictement triés par p_ij décroissant:
+    neighbors_sorted = np.take_along_axis(
+        neighbors,
+        np.argsort(-pij[np.arange(n_points)[:, None], neighbors], axis=1),
+        axis=1
+    )
+    return neighbors_sorted
+
 def gradient(pij, qij, ydata):
     n = len(pij)
 
@@ -90,12 +115,13 @@ def gradient(pij, qij, ydata):
         grad[i] = 4 * np.sum((g1 * g2).T * dist, axis=0)
     return grad
 
-def tsne(xdata, perplexity, max_iter, step, d):
+def tsne(xdata, perplexity, max_iter, step, d, method="naive" , theta =0.3):
     early_exaggeration = 20
     n = len(xdata)
 
     pij = p_prob(xdata, perplexity)
 
+    y_neighbors = get_y_neighbors(pij, perplexity)
     Y = np.zeros(shape=(max_iter, n, d))
     Y_minus1 = np.zeros(shape=(n, d))
     Y[0] = Y_minus1
@@ -110,19 +136,25 @@ def tsne(xdata, perplexity, max_iter, step, d):
             alpha = 0.8
             early_exaggeration = 1
 
-        qij = q_prob(Y[i])
+        if method == "naive":
+            qij = q_prob(Y[i])
 
-        grad = gradient(early_exaggeration*pij, qij, Y[i])
+            grad = gradient(early_exaggeration*pij, qij, Y[i])
+        elif method == "bh":
+
+            grad = bh_gradient(pij, Y[i], y_neighbors, theta)
+        else:
+            raise ValueError("method must be 'bh' or 'exact'")
+
+
 
         Y[i+1] = Y[i] - step * grad + alpha * (Y[i] - Y[i - 1])
 
         if i % 20 == 0 or i == 1:
+            qij = q_prob(Y[i])
             cost = np.sum(pij * np.log(pij / qij))
             print(f"Iteration {i}: Value of Cost Function is {cost}")
         i += 1
     return Y[-1], Y
-
-
-
 
 
