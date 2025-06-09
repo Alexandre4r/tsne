@@ -1,41 +1,44 @@
-import matplotlib.pyplot as plt
-from sklearn.datasets import fetch_openml
-from sklearn.decomposition import PCA
-import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import utils
 
-from utils import *
-# 1. Charger et réduire les données
-print("Chargement des données...")
-mnist = fetch_openml('mnist_784', version=1, as_frame=False)
-X_total = pd.DataFrame(mnist["data"])
-y_total = pd.DataFrame(mnist["target"]).astype(int)
+# Génère un cercle en 3D (N points)
+def generate_circle_3d(N=100, radius=5):
+    angles = np.linspace(0, 2*np.pi, N, endpoint=False)
+    x = radius * np.cos(angles)
+    y = radius * np.sin(angles)
+    z = radius * np.sin(2*angles)  # Pour donner un peu de structure 3D
+    return np.stack((x, y, z), axis=1)
 
-# 2. Réduction : choisir 1000 points et réduire à 30 dimensions
-sample_indices = np.random.choice(len(X_total), size=1000, replace=False)
-X_reduced = X_total.iloc[sample_indices]
-y_reduced = y_total.iloc[sample_indices].values.flatten()
+# Visualisation des données originales en 3D
+def plot_3d(data):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(data[:, 0], data[:, 1], data[:, 2], c='b')
+    ax.set_title("Données initiales (cercle 3D)")
+    plt.show()
 
-print("Réduction PCA...")
-X_pca = PCA(n_components=30).fit_transform(X_reduced)
+# Visualisation du résultat t-SNE en 2D
+def plot_2d(data, title="Projection t-SNE"):
+    plt.figure()
+    plt.scatter(data[:, 0], data[:, 1], c='r')
+    plt.title(title)
+    plt.xlabel("Dim 1")
+    plt.ylabel("Dim 2")
+    plt.axis('equal')
+    plt.show()
 
-# 3. Appliquer ton t-SNE
-print("Lancement de t-SNE personnalisé...")
-Y_final, all_Y = tsne(
-    xdata=X_pca,
-    sigma=5,           # à ajuster si besoin
-    max_iter=300,      # nombre d’itérations
-    step=0.5,          # pas de descente
-    d=2                # on réduit à 2 dimensions
-)
+N = 100
+X = generate_circle_3d(N)
+plot_3d(X)
 
-# 4. Affichage en 2D
-print("Affichage du résultat...")
-plt.figure(figsize=(10, 8))
-scatter = plt.scatter(Y_final[:, 0], Y_final[:, 1], c=y_reduced, cmap='tab10', s=10, alpha=0.7)
-plt.colorbar(scatter, ticks=range(10), label="Classe (chiffre)")
-plt.title("t-SNE personnalisé sur MNIST (1000 points)")
-plt.xlabel("Dimension 1")
-plt.ylabel("Dimension 2")
-plt.grid(True)
-plt.show()
+    # Paramètres t-SNE (tu peux les ajuster)
+sigma = 2
+max_iter = 4000
+
+step = 1
+d = 2
+
+    # Exécution du t-SNE de ton utils.py
+Y_final, Y_all = utils.tsne(X, sigma, max_iter, step, d)
+plot_2d(Y_final, "Projection t-SNE")
